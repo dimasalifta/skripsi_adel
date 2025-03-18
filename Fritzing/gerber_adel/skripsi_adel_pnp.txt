@@ -1,0 +1,67 @@
+*Pick And Place List
+*Company=
+*Author=
+*eMail=
+*
+*Project=skripsi_adel
+*Date=13:18:46
+*CreatedBy=Fritzing 0.9.3b.04.19.5c895d327c44a3114e5fcc9d8260daf0cbb52806
+*
+*
+*Coordinates in mm, always center of component
+*Origin 0/0=Lower left corner of PCB
+*Rotation in degree (0-360, math. pos.)
+*
+*No;Value;Package;X;Y;Rotation;Side;Name
+1;;;18.9054;-34.5802;0;Bottom;ESP8266 LOLIN
+2;;;15.1012;-40.435;0;Bottom;Via8
+3;;;67.3976;-36.4774;90;Bottom;TXT1
+4;;;51.9574;-60.4315;0;Bottom;MLX90614
+5;;;45.5812;-40.435;0;Bottom;Via1
+6;;;37.9644;-37.9096;0;Bottom;Via7
+7;;;68.441;-1.65392;0;Bottom;Hole2
+8;;;1.75307;-68.3751;0;Bottom;Hole4
+9;;;32.8812;-22.6551;0;Bottom;Via33
+10;;;4.94115;-53.1351;0;Bottom;Via10
+11;;;51.9462;-36.5509;0;Bottom;OLED 0.96
+12;;;4.94115;-42.9751;0;Bottom;Via17
+13;;;4.94115;-30.2751;0;Bottom;Via21
+14;;;45.5812;-25.195;0;Bottom;Via6
+15;;;32.8812;-27.7351;0;Bottom;Via40
+16;;;32.8812;-32.8151;0;Bottom;Via38
+17;;;32.8812;-30.2751;0;Bottom;Via39
+18;;;32.8812;-25.1951;0;Bottom;Via29
+19;;;32.8812;-40.4351;0;Bottom;Via36
+20;;;4.94115;-45.5151;0;Bottom;Via13
+21;;;32.8812;-35.3551;0;Bottom;Via37
+22;;;32.8812;-37.8951;0;Bottom;Via35
+23;;;4.94115;-27.7351;0;Bottom;Via23
+24;;;4.94115;-37.8951;0;Bottom;Via16
+25;;;32.8812;-42.9751;0;Bottom;Via31
+26;;;32.8812;-20.1151;0;Bottom;Via32
+27;;;32.8812;-53.1351;0;Bottom;Via27
+28;;;1.5541;-1.70161;0;Bottom;Hole3
+29;;;4.94115;-25.1951;0;Bottom;Via20
+30;;;27.5648;-6.15497;0;Bottom;TXT1
+31;;;32.8812;-17.5751;0;Bottom;Via34
+32;;;45.5812;-35.355;0;Bottom;Via3
+33;;;35.431;-67.2922;0;Bottom;TXT1
+34;;;68.441;-68.3751;0;Bottom;Hole1
+35;;;25.4955;-55.8279;180;Bottom;A1
+36;;;4.94115;-32.8151;0;Bottom;Via25
+37;;;35.1789;-2.01976;0;Bottom;TXT1
+38;;;4.94115;-35.3551;0;Bottom;Via14
+39;;;45.5812;-30.275;0;Bottom;Via4
+40;;;4.94115;-40.4351;0;Bottom;Via15
+41;;;4.94115;-22.6551;0;Bottom;Via19
+42;;;51.825;-12.3347;180;Bottom;MAX30102
+43;;;4.94115;-17.5751;0;Bottom;Via24
+44;;;32.8812;-50.5951;0;Bottom;Via30
+45;;;17.6412;-40.435;0;Bottom;Via9
+46;;;4.94115;-48.0551;0;Bottom;Via12
+47;;;32.8812;-48.0551;0;Bottom;Via26
+48;;;45.5812;-37.895;0;Bottom;Via2
+49;;;45.5812;-27.735;0;Bottom;Via5
+50;;;32.8812;-45.5151;0;Bottom;Via28
+51;;;4.94115;-50.5951;0;Bottom;Via11
+52;;;4.94115;-20.1151;0;Bottom;Via18
