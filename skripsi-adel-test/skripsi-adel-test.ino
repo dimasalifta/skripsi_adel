@@ -1,168 +1,183 @@
-#include <SPI.h>
 #include <Wire.h>
+#include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
+#include <Adafruit_MLX90614.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include "MAX30105.h"
+#include "heartRate.h"
 
+// OLED
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+#define SCREEN_ADDRESS 0x3C
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#include <Adafruit_MLX90614.h>
+// MLX90614
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 
+// MAX30102
+MAX30105 particleSensor;
+const byte RATE_SIZE = 4;
+byte rates[RATE_SIZE];
+byte rateSpot = 0;
+long lastBeat = 0;
+float beatsPerMinute;
+int beatAvg;
+double avered = 0, aveir = 0;
+double sumirrms = 0, sumredrms = 0;
+int i = 0;
+int Num = 200;
+double ESpO2 = 95.0;
+double FSpO2 = 0.7;
+double frate = 0.95;
 
-// Update these with values suitable for your network.
+float kalibrasi_suhuobj = 3.5;
+int kalibrasi_bpm = 10;
 
-const char* ssid = "digasis";
-const char* password = "digasis2025";
-const char* mqtt_server = "digitalasistensi.com";
+#define TIMETOBOOT 3000
+#define SAMPLING 5
+#define FINGER_ON 30000
+#define MINIMUM_SPO2 0.0
+#define MINIMUM_BPM 0.0
 
+// WiFi + MQTT
+const char* ssid = "KELABANG";
+const char* password = "abcd1234";
+const char* mqtt_server = "iot.digitalasistensi.com";
 WiFiClient espClient;
 PubSubClient client(espClient);
 unsigned long lastMsg = 0;
-#define MSG_BUFFER_SIZE  (50)
+#define MSG_BUFFER_SIZE 200
 char msg[MSG_BUFFER_SIZE];
-int value = 0;
-
-Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 
 void setup_wifi() {
-
   delay(10);
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-
   while (WiFi.status() != WL_CONNECTED) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(500);
-    digitalWrite(LED_BUILTIN, LOW);
     delay(500);
     Serial.print(".");
   }
-
-  randomSeed(micros());
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  Serial.println("Adafruit MLX90614 test");
-
-  if (!mlx.begin()) {
-    Serial.println("Error connecting to MLX sensor. Check wiring.");
-    while (1);
-  };
-
-  Serial.print("Emissivity = "); Serial.println(mlx.readEmissivity());
-  Serial.println("================================================");
-
-}
-
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-
-  // Switch on the LED if an 1 was received as first character
-  if ((char)payload[0] == '1') {
-    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-    // but actually the LED is on; this is because
-    // it is active low on the ESP-01)
-  } else {
-    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
-  }
-
+  Serial.println("\nWiFi connected");
 }
 
 void reconnect() {
-  // Loop until we're reconnected
   while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
     String clientId = "ESP8266Client-";
     clientId += String(random(0xffff), HEX);
-    // Attempt to connect
     if (client.connect(clientId.c_str())) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
-      // ... and resubscribe
       client.subscribe("inTopic");
     } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
       delay(5000);
     }
   }
 }
 
 void setup() {
-  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
-
-  // Show initial display buffer contents on the screen --
-  // the library initializes this with an Adafruit splash screen.
-  display.display();
-  delay(2000); // Pause for 2 seconds
-
-  // Clear the buffer
-  display.clearDisplay();
-
-  // Draw a single pixel in white
-  display.drawPixel(10, 10, SSD1306_WHITE);
-
-  // Show the display buffer on the screen. You MUST call display() after
-  // drawing commands to make them visible on screen!
-  display.display();
-  delay(2000);
-  
   Serial.begin(115200);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
+
+  // OLED
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("OLED gagal"));
+    while (true);
+  }
+
+  // MLX90614
+  if (!mlx.begin()) {
+    Serial.println("MLX90614 gagal. Periksa koneksi.");
+    while (true);
+  }
+
+  // MAX30102
+  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+    Serial.println("MAX30102 tidak ditemukan!");
+    while (true);
+  }
+  particleSensor.setup(0x7F, 4, 2, 200, 411, 16384);
+  particleSensor.enableDIETEMPRDY();
 }
 
 void loop() {
-
-  if (!client.connected()) {
-    reconnect();
-  }
+  if (!client.connected()) reconnect();
   client.loop();
 
-  unsigned long now = millis();
-  if (now - lastMsg > 2000) {
-    lastMsg = now;
-    ++value;
+  uint32_t irValue, redValue;
+  double fred, fir, SpO2 = 0;
 
-    Serial.print("Ambient = "); Serial.print(mlx.readAmbientTempC());
-    Serial.print("*C\tObject = "); Serial.print(mlx.readObjectTempC()); Serial.println("*C");
+  particleSensor.check();
+  while (particleSensor.available()) {
+    irValue = particleSensor.getFIFOIR();
+    redValue = particleSensor.getFIFORed();
 
-    snprintf (msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish("outTopic", msg);
+    if (checkForBeat(redValue)) {
+      long delta = millis() - lastBeat;
+      lastBeat = millis();
+      beatsPerMinute = 60 / (delta / 1000.0);
+      if (beatsPerMinute < 255 && beatsPerMinute > 20) {
+        rates[rateSpot++] = (byte)beatsPerMinute;
+        rateSpot %= RATE_SIZE;
+        beatAvg = 0;
+        for (byte x = 0; x < RATE_SIZE; x++) beatAvg += rates[x];
+        beatAvg /= RATE_SIZE;
+      }
+    }
+
+    if (irValue < FINGER_ON) beatsPerMinute = MINIMUM_BPM;
+
+    i++;
+    fred = (double)redValue;
+    fir = (double)irValue;
+    avered = avered * frate + fred * (1.0 - frate);
+    aveir = aveir * frate + fir * (1.0 - frate);
+    sumredrms += (fred - avered) * (fred - avered);
+    sumirrms += (fir - aveir) * (fir - aveir);
+
+    if ((i % Num) == 0) {
+      double R = (sqrt(sumredrms) / avered) / (sqrt(sumirrms) / aveir);
+      SpO2 = -23.3 * (R - 0.4) + 100;
+      ESpO2 = FSpO2 * ESpO2 + (1.0 - FSpO2) * SpO2;
+      sumredrms = 0.0; sumirrms = 0.0; i = 0;
+    }
+
+    float ambientTemp = mlx.readAmbientTempC();
+    float objectTemp = mlx.readObjectTempC();
+    float objectTempCal = objectTemp + kalibrasi_suhuobj;
+    int beatAvgCal = beatAvg + kalibrasi_bpm;
+
+    if (millis() - lastMsg > 2000) {
+      lastMsg = millis();
+
+      // Format CSV: sensor_name,bpm,spo2,temp_ambient,temp_object,status
+      snprintf(msg, MSG_BUFFER_SIZE,
+        "skripsi_adel,%d,%.2f,%.2f,%.2f,%s",
+        (irValue < FINGER_ON ? 0 : beatAvg),
+        (irValue < FINGER_ON ? 0.0 : ESpO2),
+        ambientTemp,
+        objectTempCal,
+        (irValue < FINGER_ON ? "No finger" : "OK"));
+
+      Serial.println(msg);
+      client.publish("skripsi_adel/data", msg);
+
+
+      // OLED
+      display.clearDisplay();
+      display.setCursor(2, 0);
+      display.setTextSize(1);
+      display.setTextColor(SSD1306_WHITE);
+      display.print("BPM : "); display.println(beatAvgCal);
+      display.println("");
+      display.print("SpO2: "); display.print(ESpO2, 1); display.println("%");
+      display.println("");
+      display.print("Suhu: "); display.print(objectTempCal, 1); display.println("C");
+      display.display();
+    }
+
+    particleSensor.nextSample();
   }
 }
